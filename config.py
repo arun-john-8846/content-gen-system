@@ -1,5 +1,5 @@
 """
-Configuration loader for ADAP Content Gen Web.
+Configuration loader for Content Gen Web.
 
 Priority order:
   1. Environment variables (set by Fly.io secrets or local .env loaded at startup)

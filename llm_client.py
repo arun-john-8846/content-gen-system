@@ -1,5 +1,5 @@
 """
-LLM client abstraction for ADAP Content Gen Web.
+LLM client abstraction for Content Gen Web.
 
 Supports:
   - Anthropic (direct API via anthropic SDK)

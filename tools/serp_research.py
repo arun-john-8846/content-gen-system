@@ -6,19 +6,19 @@ Uses your real Chrome profile to avoid bot detection (Option C).
 
 Requirements:
   - Chrome must be FULLY CLOSED before running
-  - US VPN must be ACTIVE before running
+  - Connect to your target locale VPN before running
 
 Usage (single keyword):
-  python tools/serp_research.py "active directory auditing"
+  python tools/serp_research.py "file server auditing"
 
 Usage (seed + cluster keywords — sequential):
-  python tools/serp_research.py "AD user activity monitoring" "user logon auditing" "privileged account monitoring"
+  python tools/serp_research.py "file server auditing" "file access monitoring" "file permission auditing"
 
   First keyword = seed keyword (researched first)
   Remaining keywords = cluster keywords (researched in order)
 
 Usage (parallel — recommended for 2+ keywords):
-  python tools/serp_research.py --parallel 3 "AD user activity monitoring" "user logon auditing" "privileged account monitoring"
+  python tools/serp_research.py --parallel 3 "file server auditing" "file access monitoring" "file permission auditing"
 
   --parallel N  Run up to N keywords simultaneously, each in its own isolated
                 Chromium instance and browser profile. Default batch size: 3.
@@ -351,19 +351,15 @@ def fetch_competitor_page(page, url: str) -> dict:
         # Detect which standard sections are present (for gap analysis)
         lower_text = full_text.lower()
         section_checks = {
-            "definition": ["what is active directory", "what is ad audit", "what is ad"],
-            "what_to_audit": ["what to audit", "key areas", "what should you audit"],
-            "benefits": ["benefit", "why audit", "why is active directory auditing"],
-            "privileged_users": ["privileged user", "domain admin", "admin account"],
-            "logon_monitoring": ["logon monitor", "login monitor", "logon activity"],
-            "gpo_auditing": ["group policy", "gpo"],
-            "permissions": ["permission change", "acl change", "access control"],
-            "alerting": ["real-time alert", "real time alert", "instant alert"],
-            "uba": ["user behavior", "ueba", "anomaly detect", "machine learning"],
-            "compliance": ["compliance", "hipaa", "sox", "pci", "gdpr"],
-            "hybrid_cloud": ["azure", "entra", "hybrid", "cloud"],
-            "native_tools": ["event viewer", "native tool", "powershell limitation", "built-in tool"],
-            "faq": ["faq", "frequently asked"],
+            "definition":      ["what is", "overview", "introduction"],
+            "what_to_audit":   ["what to audit", "key areas", "what should you"],
+            "benefits":        ["benefit", "why use", "why you need", "advantages"],
+            "how_it_works":    ["how it works", "how to", "getting started"],
+            "features":        ["feature", "capability", "what you can"],
+            "alerting":        ["real-time alert", "real time alert", "instant alert", "notification"],
+            "reporting":       ["report", "dashboard", "audit trail"],
+            "compliance":      ["compliance", "hipaa", "sox", "pci", "gdpr", "iso"],
+            "faq":             ["faq", "frequently asked"],
         }
         for section, keywords in section_checks.items():
             if any(kw in lower_text for kw in keywords):
@@ -385,8 +381,7 @@ def fetch_competitor_page(page, url: str) -> dict:
 
 def generate_summary(keyword: str, serp_data: dict, competitor_data: list) -> str:
     """
-    Generate a formatted research_summary.md following the
-    FP_PAA_and_SERP_instructions.md output format.
+    Generate a formatted research_summary.md from SERP data.
     """
     lines = []
     now = datetime.now().strftime("%B %d, %Y")
@@ -396,7 +391,6 @@ def generate_summary(keyword: str, serp_data: dict, competitor_data: list) -> st
         f"",
         f"**Keyword:** {keyword}",
         f"**Date:** {now}",
-        f"**Search parameters:** gl=us&hl=en&pws=0",
         f"**Tool:** Playwright + real Chrome profile (Option C)",
         f"",
         f"---",
@@ -550,7 +544,7 @@ def run_research_for_keyword(keyword: str, is_seed: bool = True):
     print(f"  Output    : {output_dir}")
     print(f"  Profile   : {profile_path}")
     print()
-    print("  ⚠  US VPN must be ACTIVE.")
+    print("  ⚠  Connect to your target locale VPN before running.")
     print()
     reset_browser_profile(profile_path)
     print()
@@ -616,11 +610,11 @@ def run_research_for_keyword(keyword: str, is_seed: bool = True):
                     stdin.readline()
                 time.sleep(2)
 
-            # ── Confirm US results ─────────────────────────────────────────
+            # ── Confirm locale results ─────────────────────────────────────
             if "gl=us" in page.url:
-                print("  ✓ US results confirmed")
+                print("  ✓ Locale confirmed (gl=us)")
             else:
-                _log("WARN", "Could not confirm US results — VPN may not be active", step="serp_load")
+                _log("WARN", "Could not confirm expected locale — check your VPN connection", step="serp_load")
 
             # ── Extract organic URLs ───────────────────────────────────────
             print("  Extracting organic URLs...")
