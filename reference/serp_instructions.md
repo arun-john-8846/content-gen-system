@@ -18,9 +18,9 @@ For each seed keyword, the research phase collects:
 
 ---
 
-## Step 1: US VPN required
+## Step 1: Set your locale
 
-All searches must be run with a US VPN active. SERP results vary by region.
+SERP results vary by region. Before running research, connect to the network region that matches your target audience's Google locale (use a VPN if needed). Configure this based on where your readers are.
 
 ## Step 2: Collect AI Overview
 
