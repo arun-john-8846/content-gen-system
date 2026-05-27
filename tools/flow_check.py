@@ -32,7 +32,7 @@ for slug in slugs:
         content = f.read()
 
     # Check 1: has compelling reasons
-    has_cr = "## 4 compelling reasons to choose ADAudit Plus" in content
+    has_cr = bool(re.search(r'## 4 compelling reasons', content, re.IGNORECASE))
     if not has_cr:
         issues.append(f"{slug}: missing '4 compelling reasons' section")
     else:

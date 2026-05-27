@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Reference files — Content Gen System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Reference files</h1>
+  <p class="page-meta">These files are loaded into every pipeline prompt. Add your product docs, style guide, writer instructions, and any other guides here.</p>
+</div>
+
+<div style="display:flex;gap:12px;margin-bottom:24px">
+  <a href="{{ url_for('settings') }}"        class="btn btn-ghost btn-sm">&#8592; LLM settings</a>
+  <a href="{{ url_for('settings_prompts') }}" class="btn btn-ghost btn-sm">Prompt templates</a>
+</div>
+
+<!-- Upload -->
+<div class="card" style="max-width:640px;margin-bottom:24px">
+  <h2 style="font-size:1rem;margin-bottom:.75rem">Upload a file</h2>
+  <form method="POST" action="{{ url_for('reference_upload') }}" enctype="multipart/form-data">
+    <div style="display:flex;gap:10px;align-items:center">
+      <input type="file" name="ref_file" accept=".md,.docx,.txt" class="form-input" style="flex:1;padding:5px 8px">
+      <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+    </div>
+    <div class="form-hint" style="margin-top:6px">Allowed: .md, .docx, .txt &nbsp;·&nbsp; Files are saved to the <code>reference/</code> folder</div>
+  </form>
+</div>
+
+<!-- File list -->
+<div class="card" style="max-width:640px">
+  <h2 style="font-size:1rem;margin-bottom:.75rem">Current files</h2>
+
+  {% if files %}
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border)">
+        <th style="text-align:left;padding:6px 8px">Filename</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--gray)">Size</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--gray)">Modified</th>
+        <th style="padding:6px 8px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in files %}
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:7px 8px">
+          <code style="font-size:12px">{{ f.name }}</code>
+        </td>
+        <td style="padding:7px 8px;text-align:right;color:var(--gray)">{{ f.size_kb }} KB</td>
+        <td style="padding:7px 8px;text-align:right;color:var(--gray)">{{ f.modified }}</td>
+        <td style="padding:7px 8px;text-align:right">
+          <form method="POST" action="{{ url_for('reference_delete', filename=f.name) }}"
+                style="display:inline"
+                onsubmit="return confirm('Delete {{ f.name }}?')">
+            <button type="submit" class="btn btn-ghost btn-sm" style="color:#dc3545;border-color:#dc3545">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No reference files yet. Upload a file above or drop files into the <code>reference/</code> folder on disk.</p>
+  {% endif %}
+</div>
+
+<div class="card" style="max-width:640px;margin-top:16px;background:var(--gray-light, #f8f9fa)">
+  <h2 style="font-size:.9rem;margin-bottom:.5rem">Recommended files</h2>
+  <table style="width:100%;font-size:12px;border-collapse:collapse">
+    <tr><td style="padding:3px 8px"><code>product_docs.md</code></td><td style="color:var(--gray)">Product capability reference — all claims verified here</td></tr>
+    <tr><td style="padding:3px 8px"><code>writer_instructions.md</code></td><td style="color:var(--gray)">Content writing workflow and rules</td></tr>
+    <tr><td style="padding:3px 8px"><code>style_guide.md</code></td><td style="color:var(--gray)">House style rules and naming conventions</td></tr>
+    <tr><td style="padding:3px 8px"><code>content_examples.md</code></td><td style="color:var(--gray)">Page template and canonical examples</td></tr>
+    <tr><td style="padding:3px 8px"><code>humanizer_guide.md</code></td><td style="color:var(--gray)">AI pattern removal rules and protected terms</td></tr>
+    <tr><td style="padding:3px 8px"><code>interlinking_list.md</code></td><td style="color:var(--gray)">Internal link candidates for the deliver step</td></tr>
+    <tr><td style="padding:3px 8px"><code>qa_rules.md</code></td><td style="color:var(--gray)">Custom BANNED: string rules for QA checker</td></tr>
+  </table>
+</div>
+{% endblock %}

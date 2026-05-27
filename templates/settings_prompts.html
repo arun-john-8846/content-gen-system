@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Prompt templates — Content Gen System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Prompt templates</h1>
+  <p class="page-meta">Override the default LLM prompts for each pipeline step. Leave blank to use the built-in defaults.</p>
+</div>
+
+<div style="display:flex;gap:12px;margin-bottom:24px">
+  <a href="{{ url_for('settings') }}"           class="btn btn-ghost btn-sm">&#8592; LLM settings</a>
+  <a href="{{ url_for('settings_reference') }}" class="btn btn-ghost btn-sm">Reference files</a>
+</div>
+
+<div class="card" style="max-width:860px">
+  <form method="POST" action="{{ url_for('settings_prompts') }}">
+
+    {% for prompt in prompts %}
+    <div class="form-section">
+      <h2 style="font-size:.95rem;margin-bottom:.5rem;color:var(--text)">{{ prompt.label }}</h2>
+      <div class="form-hint" style="margin-bottom:.5rem">
+        Leave blank to use the built-in default for this step.
+      </div>
+      <textarea
+        name="{{ prompt.key }}"
+        class="prompt-textarea"
+        rows="8"
+        placeholder="Leave blank to use the built-in default…"
+        spellcheck="false"
+      >{{ prompt.value }}</textarea>
+    </div>
+    {% endfor %}
+
+    <div class="form-actions" style="padding-top:.5rem">
+      <button type="submit" class="btn btn-primary">Save prompt templates</button>
+      <a href="{{ url_for('settings') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+
+  </form>
+</div>
+
+<style>
+.prompt-textarea {
+  width: 100%;
+  font-family: var(--font-mono, 'Courier New', monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+  box-sizing: border-box;
+  background: var(--gray-light, #f8f9fa);
+  color: var(--text);
+}
+.prompt-textarea:focus {
+  outline: 2px solid var(--me-mid);
+  border-color: var(--me-mid);
+  background: #fff;
+}
+</style>
+{% endblock %}

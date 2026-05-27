@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-SERP Research Tool — ManageEngine ADAudit Plus Content Pipeline
-================================================================
+SERP Research Tool — Content Gen Pipeline
+==========================================
 Uses your real Chrome profile to avoid bot detection (Option C).
 
 Requirements:
@@ -445,8 +445,8 @@ def generate_summary(keyword: str, serp_data: dict, competitor_data: list) -> st
         lines.append("No PAA box appeared for this keyword (normal for high-intent product keywords).")
     lines.append("")
 
-    # ── ME's own page ──────────────────────────────────────────────────────────
-    lines.append("## ManageEngine own page")
+    # ── Own page (client's own domain result) ────────────────────────────────
+    lines.append("## Client's own page")
     lines.append("")
     me_result = next(
         (c for c in competitor_data if "manageengine.com" in c["domain"]), None
@@ -544,7 +544,7 @@ def run_research_for_keyword(keyword: str, is_seed: bool = True):
     label = "SEED" if is_seed else "CLUSTER"
 
     print(f"\n{'='*60}")
-    print(f"  SERP Research Tool — ManageEngine ADAudit Plus")
+    print(f"  SERP Research Tool — Content Gen Pipeline")
     print(f"{'='*60}")
     print(f"  Keyword   : {keyword} [{label}]")
     print(f"  Output    : {output_dir}")

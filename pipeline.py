@@ -107,14 +107,19 @@ def _programmatic_fix(text: str) -> str:
     """Deterministic em-dash removal + paragraph splitting."""
     fixed = text.replace("\u2014", ",")
     fixed = _split_long_paragraphs(fixed)
-    # Normalise '4 compelling reasons' heading variations
-    fixed = re.sub(
-        r"^## (?:(?:four|4) (?:compelling )?reasons?.*|why choose adaudit plus|reasons to choose adaudit plus.*)$",
-        "## 4 compelling reasons to choose ADAudit Plus",
-        fixed,
-        flags=re.IGNORECASE | re.MULTILINE,
-    )
     return fixed
+
+
+def _load_all_reference_files() -> str:
+    """Load all .md files from the reference/ folder and return them concatenated."""
+    ref_dir = PROJECT_ROOT / "reference"
+    parts = []
+    for md_file in sorted(ref_dir.glob("*.md")):
+        content = md_file.read_text(encoding="utf-8")
+        parts.append(f"## {md_file.name}\n\n{content}")
+    if not parts:
+        return "[No reference files found in reference/ folder. Add .md files to guide the pipeline.]"
+    return "\n\n---\n\n".join(parts)
 
 
 # ── QA helper ─────────────────────────────────────────────────────────────────
@@ -167,29 +172,22 @@ def generate_brief(
 
     log("Step 1/4 — Generating content brief...")
 
+    ref_content = _load_all_reference_files()
+
     system = (
-        "You are an SEO content writer for ManageEngine ADAudit Plus. "
-        "Follow the writer instructions exactly.\n\n"
-        "## Writer instructions\n\n"
-        + _read_ref("reference/FP_writer_instructions.md")
-        + "\n\n---\n\n## Style guide\n\n"
-        + _read_ref("reference/MEstyleguide.md")
+        "You are an expert content writer. "
+        "Follow the writer instructions in the reference files exactly.\n\n"
+        "## Reference files\n\n"
+        + ref_content
     )
 
     user = (
         f"{research_context}\n\n---\n\n"
-        "## Product documentation (all capability claims must be verified here)\n\n"
-        + _read_ref("reference/ADAudit_Plus_product_docs.md")
-        + "\n\n---\n\n## Content examples and template\n\n"
-        + _read_ref("reference/FP_content_examples.md")
-        + "\n\n---\n\n## Interlinking list\n\n"
-        + _read_ref("reference/FP_interlinking_list.md")
-        + f"\n\n---\n\n"
         f"Produce the full content brief for:\n"
         f"- **Slug:** {slug}\n"
         f"- **Seed keyword:** {page['seed_keyword']}\n"
         f"- **Cluster keywords:** {', '.join(cluster_keywords) or 'none'}\n\n"
-        "Follow Step 1b of the writer instructions exactly. "
+        "Follow the writer instructions (Step 1) from the reference files exactly. "
         "Output ONLY the content brief markdown — no preamble, no explanation."
     )
 
@@ -221,29 +219,22 @@ def generate_draft(
         log("Brief file not found. Cannot generate draft.")
         return False
 
+    ref_content = _load_all_reference_files()
+
     system = (
-        "You are an SEO content writer for ManageEngine ADAudit Plus. "
-        "Follow the writer instructions exactly.\n\n"
-        "## Writer instructions\n\n"
-        + _read_ref("reference/FP_writer_instructions.md")
-        + "\n\n---\n\n## Style guide\n\n"
-        + _read_ref("reference/MEstyleguide.md")
-        + "\n\n---\n\n## HARD PROHIBITION — EM DASHES\n\n"
+        "You are an expert content writer. "
+        "Follow the writer instructions in the reference files exactly.\n\n"
+        "## Reference files\n\n"
+        + ref_content
+        + "\n\n---\n\n## HARD PROHIBITION \u2014 EM DASHES\n\n"
         "The em dash character (\u2014, Unicode U+2014) is BANNED from this output. "
         "Use a comma, semicolon, colon, or parentheses instead. Zero em dashes allowed."
     )
 
     user = (
         f"## Approved content brief\n\n{brief_content}\n\n---\n\n"
-        "## Product documentation (all capability claims must be verified here)\n\n"
-        + _read_ref("reference/ADAudit_Plus_product_docs.md")
-        + "\n\n---\n\n## Content examples and page template\n\n"
-        + _read_ref("reference/FP_content_examples.md")
-        + "\n\n---\n\n## Internal linking candidates\n\n"
-        + _read_ref("reference/FP_interlinking_list.md")
-        + f"\n\n---\n\nWrite the full feature page draft for slug **{slug}**.\n\n"
-        "Follow Step 2 of the writer instructions and the three-part template from "
-        "Section 8a of content examples. 1,700–1,800 body words. "
+        f"Write the full feature page draft for slug **{slug}**.\n\n"
+        "Follow the writer instructions (Step 2) from the reference files. "
         "Output ONLY the raw draft markdown — no preamble, no explanation."
     )
 
@@ -288,39 +279,14 @@ _FIX_SYSTEM = (
     "Paragraphs with 4+ sentences \u2192 split into two paragraphs of 2\u20133 sentences each.\n\n"
     "### Passive voice rule\n"
     "Rewrite \"was/were [past participle] by\" as active voice. Minimal surrounding changes.\n\n"
-    "### 4 compelling reasons section rule\n"
-    "If the QA report says '4 compelling reasons' section missing:\n"
-    "- First check if a section with a similar heading already exists "
-    "(e.g. \"Four reasons\", \"4 reasons\", \"Reasons to choose\"). "
-    "If so, RENAME the heading to exactly: ## 4 compelling reasons to choose ADAudit Plus. "
-    "Do not duplicate the section.\n"
-    "- If no such section exists at all, INSERT the following block immediately after the "
-    "bottom CTA line (the line starting with \"Download a free 30-day trial\") and before "
-    "the FAQ heading. Insert it verbatim \u2014 no customisation:\n\n"
-    "---\n\n"
-    "## 4 compelling reasons to choose ADAudit Plus\n\n"
-    "**Widely recognized**\n"
-    "ADAudit Plus has been recognized as a Gartner Peer Insights Customers' Choice for "
-    "Security Incident & Event Management (SIEM) for four consecutive years.\n\n"
-    "**Easy deployment**\n"
-    "Go from downloading ADAudit Plus to receiving predefined reports and alerts in under "
-    "30 minutes, without any professional services engagement.\n\n"
-    "**Competitive pricing**\n"
-    "ADAudit Plus is licensed per-server, not per-user. As your user count grows, you "
-    "continue to ingest log data without additional licensing costs.\n\n"
-    "**Unified visibility**\n"
-    "ADAudit Plus consolidates auditing, security, and compliance across Active Directory, "
-    "Microsoft Entra ID, Windows servers, workstations, and file servers into a single "
-    "console, eliminating the need to manage multiple tools.\n\n"
-    "---\n\n"
     "OUTPUT: Return ONLY the corrected full draft markdown. No preamble. No explanation."
 )
 
 
 def _do_humanize(slug: str, log: Callable[[str], None]) -> bool:
     """Single humanize pass. Returns True on success."""
-    humanizer = _read_ref("reference/humanizer_SKILL.md")
-    style = _read_ref("reference/MEstyleguide.md")
+    humanizer = _read_ref("reference/humanizer_guide.md")
+    style = _read_ref("reference/style_guide.md")
     system = _HUMANIZE_SYSTEM.format(humanizer=humanizer, style=style)
 
     current = _read_output(slug, f"{slug}_draft.md")
@@ -430,7 +396,7 @@ def humanize_and_qa_loop(
 
 # ── Step 4: Deliver ───────────────────────────────────────────────────────────
 
-_PUBLISH_SYSTEM = """You are an SEO content writer for ManageEngine ADAudit Plus producing the PUBLISH file for a feature page.
+_PUBLISH_SYSTEM = """You are an expert SEO content writer producing the PUBLISH file for a feature page.
 
 Output the file in EXACTLY this format:
 
@@ -454,10 +420,8 @@ Meta description C (N characters): [text]
 
 Meta title rules:
 - Three distinct variants — not minor wording changes
-- Variant A: [Primary keyword] | ManageEngine ADAudit Plus — keyword-first, 50–58 chars
-- Variant B: benefit or capability phrase + "with ADAudit Plus" — 52–60 chars
-- Variant C: action or outcome phrase + "— ADAudit Plus" — 50–58 chars
-- Title case throughout; primary keyword + ADAudit Plus in every variant; maximum 60 characters
+- Each variant must include the primary keyword and the product name
+- Title case throughout; maximum 60 characters per variant
 - Do not repeat the same opening word across variants
 - Count actual characters and include the count in parentheses
 
@@ -466,14 +430,14 @@ Meta description rules:
 - Sentence case; second person (you/your)
 - Each must include a specific capability claim and a CTA or benefit signal
 - No variant opens with the same phrase as another
-- Do NOT open any variant with "ADAudit Plus" — lead with the benefit or the user's problem
+- Lead with the benefit or the user's problem, not the product name
 
 Internal linking rules:
 - Apply 6–12 contextually earned internal links to the page content
 - Anchor text must be a specific noun/phrase already present in the body prose
 - No self-links; no competitor comparison or whitepaper page links
-- Do not use report names (Type A terms) as anchor text
 - Format as markdown hyperlinks: [anchor text](URL)
+- Only add links if an interlinking list is provided below
 
 Page content rules:
 - Do NOT rewrite, add, or remove any body content — the draft is QA-clean
@@ -483,14 +447,14 @@ Page content rules:
 INTERLINKING LIST:
 {interlinks}"""
 
-_REVIEW_SYSTEM = """You are a QA specialist for ManageEngine ADAudit Plus feature pages. Produce the REVIEW file for this page — internal only, never published.
+_REVIEW_SYSTEM = """You are a QA specialist producing the REVIEW file for a content page — internal only, never published.
 
 Output format:
 
 # REVIEW DOC — [Page title derived from slug]
 **Slug:** [slug]
 **Date completed:** [today]
-**Status:** Steps 1–6 complete. External gates (Grammarly, Copyscape, AI humanizer) pending.
+**Status:** Pipeline complete. External gates (grammar check, plagiarism check, AI humanizer check) pending.
 
 ---
 
@@ -498,7 +462,7 @@ Output format:
 
 | Category | Score | Max | Status | Notes |
 |---|---|---|---|---|
-| ME Style Guide | [score] | 75 | [GREEN/YELLOW/RED] | [detailed notes] |
+| Style guide | [score] | 75 | [GREEN/YELLOW/RED] | [detailed notes] |
 | Humanization | [score] | 50 | [GREEN/YELLOW/RED] | [detailed notes] |
 | Product accuracy | [score] | 50 | [GREEN/YELLOW/RED] | [detailed notes] |
 | SERP and content strategy | [score] | 65 | [GREEN/YELLOW/RED] | [detailed notes] |
@@ -509,13 +473,13 @@ PASS = ≥225/240 (≥93.75%). MINOR ISSUES = 200–224. NEEDS WORK = <200.
 
 Scoring criteria summary:
 
-ME Style Guide (75 pts): second person throughout (-3 each violation), active voice (-2 each passive), paragraphs ≤3 sentences (-2 each), no rhetorical openers (-2), no framing sentences (-2), no short-sentence stacking (-2), no repeated informal words (-3 per recurrence), sentence case headings (-2 each), Oxford comma (-1 each missing), zero em dashes (-5 if any), correct naming conventions, 300+ report count (-5 if wrong), no UI element names in body prose (-2 each), three meta title variants 50–60 chars (-5 if absent), three meta description variants 150–160 chars (-5 if absent).
+Style guide (75 pts): second person throughout (-3 each violation), active voice (-2 each passive), paragraphs ≤3 sentences (-2 each), no rhetorical openers (-2), no framing sentences (-2), no short-sentence stacking (-2), sentence case headings (-2 each), Oxford comma (-1 each missing), zero em dashes (-5 if any), correct naming conventions per style_guide.md, three meta title variants 50–60 chars (-5 if absent), three meta description variants 150–160 chars (-5 if absent).
 
-Humanization (50 pts): no dangling -ing clause openers (-3 each), no generic closers (-2 each), no wordy phrases (-2 each), no triple "that" clauses (-2 each), no passive compliance language (-2 each), no AI vocabulary words like leverage/utilize/seamlessly/robust/streamline/comprehensive/enhance (-3 each), no deliberate contrast stacking (-2 each), domain expert posture throughout (-2 each hedging statement), no bureaucratic setup lines (-2 each), no closing bullets that restate preceding content (-2 each).
+Humanization (50 pts): no dangling -ing clause openers (-3 each), no generic closers (-2 each), no wordy phrases (-2 each), no AI vocabulary words like leverage/utilize/seamlessly/robust/streamline/enhance (-3 each), domain expert posture throughout (-2 each hedging statement), no bureaucratic setup lines (-2 each), no closing bullets that restate preceding content (-2 each).
 
-Product accuracy (50 pts): all capability claims verifiable (-5 per unverified claim), no out-of-scope product features attributed to ADAudit Plus (-10 per violation), 300+ report count (-5 if wrong), attack technique names correct (-3 per error), compliance standard names correct (-2 per formatting error), ME-owned elements present: UBA, Attack Surface Analyzer, custom report profiles, response automation.
+Product accuracy (50 pts): all capability claims verifiable in product_docs.md (-5 per unverified claim), no out-of-scope features claimed (-10 per violation), compliance standard names correctly formatted (-2 per error).
 
-SERP and content strategy (65 pts): table-stakes topics covered, ME-owned angles present, FAQ with 5–6 live PAA questions (-5 if absent or wrong count), screenshot placeholders correctly formatted (-3 each missing), capability grid present with 25–35 word card bodies (-5 if absent), word count 1,700–1,800 body words (-5 if significantly outside range), internal links applied 6–12 (-5 if absent), links recorded in review doc.
+SERP and content strategy (65 pts): table-stakes topics covered, FAQ with 5–6 live PAA questions (-5 if absent or wrong count), screenshot placeholders correctly formatted (-3 each missing), word count within target range (-5 if significantly outside), internal links applied 6–12 (-5 if absent), links recorded in review doc.
 
 After the scorecard:
 
@@ -534,7 +498,7 @@ List each internal link in the publish file:
 - Em dash removal: [final count zero / any remaining]
 - QA pass: [issues found and how resolved]
 - Humanization: [AI patterns identified and removed]
-- External gates pending: Grammarly grammar check, Copyscape plagiarism check, AI humanizer detection check"""
+- External gates pending: grammar check, plagiarism check, AI humanizer detection check"""
 
 
 def deliver(
@@ -554,7 +518,9 @@ def deliver(
     log("QA gate passed. Generating delivery files...")
 
     final_draft = _read_output(slug, f"{slug}_draft.md")
-    interlinks = _read_ref("reference/FP_interlinking_list.md")
+    # Load interlinking list if present (users add reference/interlinking_list.md)
+    interlinks_path = PROJECT_ROOT / "reference" / "interlinking_list.md"
+    interlinks = interlinks_path.read_text(encoding="utf-8") if interlinks_path.exists() else "(No interlinking list found. Add reference/interlinking_list.md to enable internal links.)"
     today = date.today().strftime("%B %-d, %Y")
 
     # ── Publish file ─────────────────────────────────────────────────────────

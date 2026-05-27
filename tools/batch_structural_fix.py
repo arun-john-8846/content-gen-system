@@ -1,30 +1,19 @@
 #!/usr/bin/env python3
 """
-Batch structural fix for ADAudit Plus feature pages.
+Batch structural fix for feature pages.
 Applies two automated changes to all publish.md files:
-  1. Insert '4 compelling reasons' section before FAQ
+  1. Insert '4 compelling reasons' section before FAQ (reads from reference/compelling_reasons.md)
   2. Remove MITRE ATT&CK® mentions (replace with product framing)
 """
 import re, os, sys
 
-COMPELLING_REASONS = """
----
+COMPELLING_REASONS_FILE = os.path.join(os.path.dirname(__file__), "..", "reference", "compelling_reasons.md")
 
-## 4 compelling reasons to choose ADAudit Plus
-
-**Widely recognized**
-ADAudit Plus has been recognized as a Gartner Peer Insights Customers' Choice for Security Incident & Event Management (SIEM) for four consecutive years.
-
-**Easy deployment**
-Go from downloading ADAudit Plus to receiving predefined reports and alerts in under 30 minutes, without any professional services engagement.
-
-**Competitive pricing**
-ADAudit Plus is licensed per-server, not per-user. As your user count grows, you continue to ingest log data without additional licensing costs.
-
-**Unified visibility**
-ADAudit Plus consolidates auditing, security, and compliance across Active Directory, Microsoft Entra ID, Windows servers, workstations, and file servers into a single console, eliminating the need to manage multiple tools.
-
-"""
+def _load_compelling_reasons():
+    if os.path.isfile(COMPELLING_REASONS_FILE):
+        with open(COMPELLING_REASONS_FILE, "r") as f:
+            return "\n---\n\n" + f.read().strip() + "\n\n"
+    return ""
 
 OUTPUT_DIR = "output"
 SKIP_SLUGS = {"employee-time-tracking-software", "windows-server-auditing-software", "output"}
@@ -46,7 +35,9 @@ for slug in sorted(os.listdir(OUTPUT_DIR)):
     changed = []
 
     # 1. Add compelling reasons before FAQ (if not already present)
-    if "## 4 compelling reasons to choose ADAudit Plus" not in content:
+    COMPELLING_REASONS = _load_compelling_reasons()
+    cr_heading_match = re.search(r'^## 4 compelling reasons', content, re.MULTILINE | re.IGNORECASE)
+    if not cr_heading_match and COMPELLING_REASONS:
         # Find the FAQ heading and insert before it
         faq_match = re.search(r'\n## Frequently asked questions', content)
         if faq_match:

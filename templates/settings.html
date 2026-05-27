@@ -1,10 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Settings — ADAP Content System{% endblock %}
+{% block title %}Settings — Content Gen System{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <h1>Settings</h1>
   <p class="page-meta">Configure the LLM provider, API keys, and optional MCP server.</p>
+</div>
+
+<div style="display:flex;gap:12px;margin-bottom:24px">
+  <a href="{{ url_for('settings_prompts') }}"   class="btn btn-ghost btn-sm">Prompt templates</a>
+  <a href="{{ url_for('settings_reference') }}" class="btn btn-ghost btn-sm">Reference files</a>
 </div>
 
 <div class="card" style="max-width:640px">

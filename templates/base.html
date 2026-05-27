@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}ADAP Content System{% endblock %}</title>
+  <title>{% block title %}Content Gen System{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <header class="top-nav">
     <div class="nav-brand">
-      <span class="nav-logo">ME</span>
-      <span class="nav-title">ADAudit Plus · Content System</span>
+      <span class="nav-logo">CG</span>
+      <span class="nav-title">Content Gen System</span>
     </div>
     <nav class="nav-links">
       <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a>
-      <a href="{{ url_for('settings') }}"  class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}">Settings</a>
+      <a href="{{ url_for('settings') }}"  class="nav-link {% if request.endpoint in ['settings','settings_prompts','settings_reference'] %}active{% endif %}">Settings</a>
       <a href="{{ url_for('new_page') }}" class="btn btn-primary btn-sm">+ New page</a>
     </nav>
   </header>

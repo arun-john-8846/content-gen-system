@@ -1,10 +1,11 @@
-"""Flask app — ADAP Content Gen Web (platform-agnostic version)."""
+"""Flask app — Content Gen Web (platform-agnostic content pipeline)."""
 
 import json
 import os
 import re
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from flask import (
@@ -29,7 +30,7 @@ import pipeline
 PROJECT_ROOT = Path(__file__).parent
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.environ.get("SECRET_KEY", "adap-web-dev-2026"))
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.environ.get("SECRET_KEY", "content-gen-web-2026"))
 
 # Boot: schema + filesystem scan
 models.init_db()
@@ -483,6 +484,106 @@ def settings():
 
     settings_data = config.get_all_for_ui()
     return render_template("settings.html", settings=settings_data)
+
+
+# ── Prompt template routes ────────────────────────────────────────────────────
+
+_PROMPT_KEYS = [
+    "brief_system",
+    "draft_system",
+    "humanize_system",
+    "fix_system",
+    "publish_system",
+    "review_system",
+]
+
+_PROMPT_LABELS = {
+    "brief_system":    "Brief — system prompt",
+    "draft_system":    "Draft — system prompt",
+    "humanize_system": "Humanize — system prompt",
+    "fix_system":      "Fix — system prompt",
+    "publish_system":  "Publish — system prompt",
+    "review_system":   "Review — system prompt",
+}
+
+
+@app.route("/settings/prompts", methods=["GET", "POST"])
+def settings_prompts():
+    if request.method == "POST":
+        saved = []
+        for key in _PROMPT_KEYS:
+            val = request.form.get(key)
+            if val is not None:
+                models.set_prompt(key, val)
+                saved.append(key)
+        flash(f"Prompts saved ({len(saved)} field(s) updated).", "success")
+        return redirect(url_for("settings_prompts"))
+
+    stored = models.get_all_prompts()
+    prompts = [
+        {
+            "key": k,
+            "label": _PROMPT_LABELS[k],
+            "value": stored.get(k, ""),
+        }
+        for k in _PROMPT_KEYS
+    ]
+    return render_template("settings_prompts.html", prompts=prompts)
+
+
+# ── Reference file management routes ─────────────────────────────────────────
+
+_ALLOWED_REF_EXTENSIONS = {".md", ".docx", ".txt"}
+
+
+@app.route("/settings/reference", methods=["GET"])
+def settings_reference():
+    ref_dir = PROJECT_ROOT / "reference"
+    ref_dir.mkdir(exist_ok=True)
+    files = []
+    for f in sorted(ref_dir.iterdir()):
+        if f.is_file():
+            stat = f.stat()
+            files.append({
+                "name": f.name,
+                "size_kb": round(stat.st_size / 1024, 1),
+                "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
+            })
+    return render_template("settings_reference.html", files=files)
+
+
+@app.route("/settings/reference/upload", methods=["POST"])
+def reference_upload():
+    uploaded = request.files.get("ref_file")
+    if not uploaded or not uploaded.filename:
+        flash("No file selected.", "error")
+        return redirect(url_for("settings_reference"))
+
+    filename = uploaded.filename
+    ext = Path(filename).suffix.lower()
+    if ext not in _ALLOWED_REF_EXTENSIONS:
+        flash(f"File type '{ext}' not allowed. Use .md, .docx, or .txt.", "error")
+        return redirect(url_for("settings_reference"))
+
+    # Sanitise filename — keep only safe characters
+    safe_name = re.sub(r"[^\w\-.]", "_", filename)
+    dest = PROJECT_ROOT / "reference" / safe_name
+    uploaded.save(str(dest))
+    flash(f"'{safe_name}' uploaded to reference/.", "success")
+    return redirect(url_for("settings_reference"))
+
+
+@app.route("/settings/reference/delete/<path:filename>", methods=["POST"])
+def reference_delete(filename):
+    # Guard against path traversal
+    safe_name = Path(filename).name
+    target = PROJECT_ROOT / "reference" / safe_name
+    if target.exists() and target.is_file():
+        target.unlink()
+        flash(f"'{safe_name}' deleted.", "success")
+    else:
+        flash(f"File '{safe_name}' not found.", "error")
+    return redirect(url_for("settings_reference"))
 
 
 # ── Run ───────────────────────────────────────────────────────────────────────

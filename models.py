@@ -57,6 +57,11 @@ def init_db():
         key   TEXT PRIMARY KEY,
         value TEXT NOT NULL DEFAULT ''
     );
+
+    CREATE TABLE IF NOT EXISTS prompts (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL DEFAULT ''
+    );
     """)
     conn.commit()
     conn.close()
@@ -254,5 +259,35 @@ def get_all_settings() -> dict:
     """Return all settings as a dict."""
     conn = get_db()
     rows = conn.execute("SELECT key, value FROM settings").fetchall()
+    conn.close()
+    return {r["key"]: r["value"] for r in rows}
+
+
+# ── Prompts (per-step LLM prompt templates) ───────────────────────────────────
+
+def get_prompt(key: str, default: str = "") -> str:
+    """Read a prompt template from DB. Returns default if not set."""
+    conn = get_db()
+    row = conn.execute("SELECT value FROM prompts WHERE key=?", (key,)).fetchone()
+    conn.close()
+    return row["value"] if row else default
+
+
+def set_prompt(key: str, value: str) -> None:
+    """Upsert a prompt template in the DB."""
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO prompts(key, value) VALUES (?,?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, value)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_all_prompts() -> dict:
+    """Return all stored prompt overrides as a dict."""
+    conn = get_db()
+    rows = conn.execute("SELECT key, value FROM prompts").fetchall()
     conn.close()
     return {r["key"]: r["value"] for r in rows}

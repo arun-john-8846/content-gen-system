@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert ADAudit Plus feature page markdown files to .docx format."""
+"""Convert feature page markdown files to .docx format."""
 
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
