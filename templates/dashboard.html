@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ADAP Content System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Pages</h1>
+  <a href="{{ url_for('new_page') }}" class="btn btn-primary">+ New page</a>
+</div>
+
+{% if page_data %}
+
+{# ── Split into in-progress and completed ── #}
+{% set in_progress_pages = [] %}
+{% set completed_pages = [] %}
+{% for item in page_data %}
+  {% if item.steps | selectattr('status', 'ne', 'done') | list | length == 0 %}
+    {% set _ = completed_pages.append(item) %}
+  {% else %}
+    {% set _ = in_progress_pages.append(item) %}
+  {% endif %}
+{% endfor %}
+
+{# ── In-progress table ── #}
+{% if in_progress_pages %}
+<h2 class="section-label">In progress</h2>
+<div class="card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Seed keyword</th>
+        <th>Slug</th>
+        <th>Next step</th>
+        <th style="width:240px">Progress</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in in_progress_pages %}
+      {% set p = item.page %}
+      {% set steps = item.steps %}
+      {# Find first non-done step #}
+      {% set next_step = steps | selectattr('status', 'ne', 'done') | first %}
+      <tr>
+        <td>
+          <a href="{{ url_for('page_detail', slug=p.slug) }}" class="slug-link">{{ p.seed_keyword }}</a>
+        </td>
+        <td class="seed-kw"><code style="font-size:11px">{{ p.slug }}</code></td>
+        <td>
+          {% if next_step %}
+            <span class="next-step-chip next-step-{{ next_step.status }}">{{ next_step.label }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="step-bar">
+            {% for step in steps %}
+            <div class="step-chip step-{{ step.status }}" title="Step {{ step.number }}: {{ step.label }}">
+              <span class="step-dot"></span>
+            </div>
+            {% endfor %}
+          </div>
+        </td>
+        <td class="actions-cell">
+          {% if next_step %}
+            {% if next_step.number == 1 %}
+              <a href="{{ url_for('page_detail', slug=p.slug, tab='research') }}" class="btn btn-sm btn-primary">Research</a>
+            {% elif next_step.number == 2 %}
+              <a href="{{ url_for('page_detail', slug=p.slug, tab='brief') }}" class="btn btn-sm btn-primary">Brief</a>
+            {% elif next_step.number == 3 %}
+              <a href="{{ url_for('page_detail', slug=p.slug, tab='overview') }}" class="btn btn-sm btn-primary">Draft</a>
+            {% elif next_step.number <= 5 %}
+              <a href="{{ url_for('page_detail', slug=p.slug, tab='qa') }}" class="btn btn-sm btn-primary">QA</a>
+            {% else %}
+              <a href="{{ url_for('page_detail', slug=p.slug, tab='delivery') }}" class="btn btn-sm btn-primary">Deliver</a>
+            {% endif %}
+          {% endif %}
+          <a href="{{ url_for('page_detail', slug=p.slug) }}" class="btn btn-sm btn-secondary">Open</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── Completed cards ── #}
+{% if completed_pages %}
+<h2 class="section-label" style="margin-top:2rem">Completed</h2>
+<div class="completed-grid">
+  {% for item in completed_pages %}
+  {% set p = item.page %}
+  <div class="completed-card">
+    <div class="cc-keyword">{{ p.seed_keyword }}</div>
+    <div class="cc-slug"><code>{{ p.slug }}</code></div>
+    <div class="cc-actions">
+      <a href="{{ url_for('page_detail', slug=p.slug, tab='delivery') }}" class="btn btn-sm btn-primary">Download</a>
+      <a href="{{ url_for('page_detail', slug=p.slug) }}" class="btn btn-sm btn-secondary">Open</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <p>No pages yet. <a href="{{ url_for('new_page') }}">Create your first page</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% block title %}{{ slug }} — ADAP Content System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">Dashboard</a> / {{ slug }}</div>
+  <h1>{{ page.seed_keyword }}</h1>
+  <p class="page-meta">
+    Slug: <code>{{ slug }}</code>
+    {% for kw in cluster_keywords %} · <em>{{ kw }}</em>{% endfor %}
+  </p>
+</div>
+
+<!-- Step tracker -->
+<div class="step-tracker">
+  {% for step in steps %}
+  <div class="tracker-step tracker-{{ step.status }}">
+    <div class="tracker-dot">
+      {% if step.status == 'done' %}✓{% elif step.status == 'in-progress' %}…{% else %}{{ step.number }}{% endif %}
+    </div>
+    <div class="tracker-label">{{ step.label }}</div>
+  </div>
+  {% if not loop.last %}<div class="tracker-connector"></div>{% endif %}
+  {% endfor %}
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <a href="{{ url_for('page_detail', slug=slug, tab='overview') }}"  class="tab {% if active_tab == 'overview'  %}active{% endif %}">Overview</a>
+  <a href="{{ url_for('page_detail', slug=slug, tab='research') }}"  class="tab {% if active_tab == 'research'  %}active{% endif %}">Research</a>
+  <a href="{{ url_for('page_detail', slug=slug, tab='brief') }}"     class="tab {% if active_tab == 'brief'     %}active{% endif %}">Brief</a>
+  <a href="{{ url_for('page_detail', slug=slug, tab='files') }}"     class="tab {% if active_tab == 'files'     %}active{% endif %}">Files</a>
+  <a href="{{ url_for('page_detail', slug=slug, tab='qa') }}"        class="tab {% if active_tab == 'qa'        %}active{% endif %}">QA</a>
+  <a href="{{ url_for('page_detail', slug=slug, tab='pipeline') }}"  class="tab {% if active_tab == 'pipeline'  %}active{% endif %}">
+    Pipeline {% if pipeline_running %}<span class="tab-dot tab-dot-running"></span>{% endif %}
+  </a>
+  <a href="{{ url_for('page_detail', slug=slug, tab='delivery') }}"  class="tab {% if active_tab == 'delivery'  %}active{% endif %}">Delivery</a>
+</div>
+
+
+<!-- ── Overview tab ── -->
+{% if active_tab == 'overview' %}
+<div class="tab-content card">
+  <h2>Workflow actions</h2>
+
+  {% if pipeline_running %}
+  <div class="alert alert-info" style="margin-bottom:1.25rem">
+    ⚙ Pipeline is currently running. <a href="{{ url_for('page_detail', slug=slug, tab='pipeline') }}">View live progress →</a>
+  </div>
+  {% endif %}
+
+  <div class="action-grid">
+
+    {% set step1 = steps[0] %}
+    <div class="action-card {% if step1.status == 'done' %}action-done{% endif %}">
+      <div class="action-title">Step 1 — Research</div>
+      <div class="action-status status-{{ step1.status }}">{{ step1.status | replace('-', ' ') | title }}</div>
+      {% if step1.status == 'done' %}
+        <p class="action-note">Research complete. View summaries in the Research tab.</p>
+        <a href="{{ url_for('page_detail', slug=slug, tab='research') }}" class="btn btn-sm btn-secondary">View research</a>
+      {% else %}
+        <p class="action-note">Research runs automatically on page creation. Re-run below if needed.</p>
+        <form method="POST" action="{{ url_for('research_start', slug=slug) }}" style="display:inline-flex;align-items:center;gap:.5rem">
+          <label for="parallel_batch_size" style="font-size:.85rem;white-space:nowrap;margin:0">Parallel batch:</label>
+          <input type="number" id="parallel_batch_size" name="parallel_batch_size" value="3" min="1" max="5" style="width:3.5rem;padding:.2rem .4rem;font-size:.85rem">
+          <button type="submit" class="btn btn-sm btn-primary">Run research</button>
+        </form>
+      {% endif %}
+    </div>
+
+    {% set step2 = steps[1] %}
+    <div class="action-card {% if step2.status == 'done' %}action-done{% endif %}">
+      <div class="action-title">Steps 2–5 — Full LLM pipeline</div>
+      <div class="action-status status-{{ step2.status }}">{{ step2.status | replace('-', ' ') | title }}</div>
+      {% if pipeline_running %}
+        <p class="action-note">Pipeline is running. Watch progress in the Pipeline tab.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <a href="{{ url_for('page_detail', slug=slug, tab='pipeline') }}" class="btn btn-sm btn-primary">View pipeline log</a>
+          <form method="POST" action="{{ url_for('pipeline_cancel', slug=slug) }}" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-secondary">Cancel</button>
+          </form>
+        </div>
+      {% elif step2.status == 'done' %}
+        <p class="action-note">Pipeline completed. View output files in the Files and Delivery tabs.</p>
+        <a href="{{ url_for('page_detail', slug=slug, tab='delivery') }}" class="btn btn-sm btn-secondary">Delivery tab</a>
+      {% else %}
+        <p class="action-note">Runs Brief → Draft → Humanize+QA → Delivery automatically using the configured LLM.</p>
+        <form method="POST" action="{{ url_for('pipeline_start', slug=slug) }}" style="display:inline">
+          <button type="submit" class="btn btn-primary {% if step1.status != 'done' %}btn-disabled{% endif %}"
+            {% if step1.status != 'done' %}disabled title="Run research first"{% endif %}>
+            Run full pipeline
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    {% set step6 = steps[5] %}
+    <div class="action-card {% if step6.status == 'done' %}action-done{% endif %}">
+      <div class="action-title">Step 6 — Delivery</div>
+      <div class="action-status status-{{ step6.status }}">{{ step6.status | replace('-', ' ') | title }}</div>
+      <p class="action-note">Build and download the publish and review .docx files.</p>
+      <a href="{{ url_for('page_detail', slug=slug, tab='delivery') }}" class="btn btn-sm btn-secondary">Delivery tab</a>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── Research tab ── -->
+{% elif active_tab == 'research' %}
+<div class="tab-content card">
+  <div class="section-header">
+    <h2>Research</h2>
+    <form method="POST" action="{{ url_for('research_start', slug=slug) }}" style="display:inline-flex;align-items:center;gap:.5rem">
+      <label for="research_tab_batch_size" style="font-size:.85rem;white-space:nowrap;margin:0">Parallel batch:</label>
+      <input type="number" id="research_tab_batch_size" name="parallel_batch_size" value="3" min="1" max="5" style="width:3.5rem;padding:.2rem .4rem;font-size:.85rem">
+      <button type="submit" class="btn btn-sm btn-secondary">Re-run research</button>
+    </form>
+  </div>
+
+  <div class="alert alert-warning" style="font-size:12px;margin-bottom:1rem">
+    ⚠ Research uses a real Chrome profile with a US-located browser session. Run research from your local machine only.
+    Cloud deploys (Fly.io) cannot run research — use the pipeline for LLM steps after research is done.
+  </div>
+
+  {% if latest_research_job %}
+  <div class="research-status-bar">
+    <span class="job-status job-{{ latest_research_job.status }}">{{ latest_research_job.status | title }}</span>
+    <span class="job-meta">Job #{{ latest_research_job.id }} · started {{ latest_research_job.started_at[:19] }}</span>
+  </div>
+
+  {% if latest_research_job.status == 'running' %}
+  <div id="captcha-banner" class="alert alert-warning" style="display:none">
+    ⚠ CAPTCHA detected. Solve it in the Terminal window where the research script is running, then click
+    <button id="captcha-continue-btn" class="btn btn-sm btn-primary" onclick="sendCaptchaContinue()">CAPTCHA solved — continue</button>
+  </div>
+  <div class="log-container">
+    <div class="log-header">Live log <span id="log-status-badge" class="badge badge-running">Running</span></div>
+    <pre id="log-output" class="log-output"></pre>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <h3 style="margin-top:1.5rem">Research summaries</h3>
+  {% if research_folders %}
+  <div class="research-cards">
+    {% for rf in research_folders %}
+    <div class="research-card {% if rf.summary_exists %}research-card-ready{% endif %}">
+      <div class="rc-label">{{ rf.label }}</div>
+      <div class="rc-keyword">{{ rf.keyword }}</div>
+      <div class="rc-meta">
+        {% if rf.summary_exists %}
+          ✓ Summary ready · {{ rf.competitor_count }} competitor files
+        {% else %}Folder not found yet{% endif %}
+      </div>
+      {% if rf.summary_exists %}
+      <a href="{{ url_for('research_view', slug=slug, kw_slug=rf.kw_slug) }}"
+         target="_blank" class="btn btn-sm btn-secondary" style="margin-top:.5rem">View summary</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% set all_ready = research_folders | selectattr('summary_exists') | list | length == research_folders | length %}
+  {% if all_ready %}
+  <div class="next-step-banner" style="margin-top:1.5rem">
+    <div class="next-step-inner">
+      <div class="next-step-text">
+        <strong>Research complete.</strong> Ready to run the LLM pipeline.
+      </div>
+      <form method="POST" action="{{ url_for('pipeline_start', slug=slug) }}" style="display:inline">
+        <button type="submit" class="btn btn-primary">Run pipeline →</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+  {% else %}
+  <p class="muted">No keywords configured.</p>
+  {% endif %}
+</div>
+
+
+<!-- ── Brief tab ── -->
+{% elif active_tab == 'brief' %}
+<div class="tab-content card">
+  <div class="section-header">
+    <h2>Content brief</h2>
+    <div style="display:flex;gap:.5rem;align-items:center">
+      {% if brief_exists %}
+        <button id="edit-brief-btn" class="btn btn-sm btn-secondary" onclick="toggleBriefEdit()">Edit</button>
+        <span class="badge badge-pass">AUTO-APPROVED</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if brief_exists %}
+    <div class="qa-meta">
+      File: <code>output/{{ slug }}/{{ slug }}_brief.md</code>
+      {% if brief_mtime %} · Last modified: {{ brief_mtime }}{% endif %}
+    </div>
+    <div id="brief-view" class="research-content" style="margin-top:1rem">{{ brief_html | safe }}</div>
+    <div id="brief-edit" style="display:none;margin-top:1rem">
+      <form id="brief-save-form" method="POST" action="{{ url_for('brief_save', slug=slug) }}">
+        <textarea name="brief_content" id="brief-textarea" class="brief-editor">{{ brief_raw }}</textarea>
+        <div style="margin-top:.75rem;display:flex;gap:.5rem">
+          <button type="button" class="btn btn-primary" onclick="submitBriefSave()">Save brief</button>
+          <button type="button" class="btn btn-secondary" onclick="toggleBriefEdit()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  {% else %}
+    <div class="alert alert-warning">
+      No brief file found at <code>output/{{ slug }}/{{ slug }}_brief.md</code>.
+      Run the pipeline from the Overview tab — the brief will be generated automatically.
+    </div>
+  {% endif %}
+</div>
+
+
+<!-- ── Files tab ── -->
+{% elif active_tab == 'files' %}
+<div class="tab-content card">
+  <h2>Output files</h2>
+  {% if output_files %}
+  <table class="data-table">
+    <thead><tr><th>File</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for fname in output_files %}
+      <tr>
+        <td><code>{{ fname }}</code></td>
+        <td>
+          <a href="{{ url_for('serve_file', slug=slug, filename=fname) }}"
+             class="btn btn-sm btn-secondary" download>Download</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No output files yet. Run the pipeline to generate them.</p>
+  {% endif %}
+</div>
+
+
+<!-- ── QA tab ── -->
+{% elif active_tab == 'qa' %}
+<div class="tab-content card">
+  <div class="section-header">
+    <h2>QA check</h2>
+    <form method="POST" action="{{ url_for('run_qa', slug=slug) }}">
+      <button type="submit" class="btn btn-primary">Run QA check manually</button>
+    </form>
+  </div>
+
+  {% if qa_sections %}
+  <div class="qa-meta">
+    Last run: {{ qa_ts[:19] if qa_ts else '—' }} ·
+    <strong class="{% if qa_total == 0 %}text-success{% else %}text-danger{% endif %}">
+      {{ qa_total }} genuine issue(s)
+    </strong>
+  </div>
+  <table class="data-table qa-table">
+    <thead>
+      <tr><th>#</th><th>Check</th><th>Count</th><th>Status</th><th>Details</th></tr>
+    </thead>
+    <tbody>
+      {% for s in qa_sections %}
+      <tr class="qa-row-{{ s.status }}">
+        <td>{{ s.num }}</td>
+        <td>{{ s.label }}</td>
+        <td>{{ s.count if s.count is not none else '—' }}</td>
+        <td><span class="badge badge-{{ s.status }}">{{ s.status | upper }}</span></td>
+        <td>
+          {% if s.details %}
+          <details>
+            <summary>{{ s.details | length }} line(s)</summary>
+            <pre class="qa-details">{{ s.details | join('\n') }}</pre>
+          </details>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="margin-top:1.5rem">
+    <h3>Mark humanization complete</h3>
+    <p class="muted">After fixing all issues, mark step 5 complete.</p>
+    <form method="POST" action="{{ url_for('mark_humanized', slug=slug) }}" style="display:inline">
+      <button type="submit" class="btn btn-secondary">Mark step 5 complete</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="muted">No QA results yet. Run the QA check above or run the full pipeline.</p>
+  {% endif %}
+</div>
+
+
+<!-- ── Pipeline tab ── -->
+{% elif active_tab == 'pipeline' %}
+<div class="tab-content card">
+  <div class="section-header">
+    <h2>LLM pipeline</h2>
+    <div style="display:flex;gap:.5rem">
+      {% if not pipeline_running %}
+      <form method="POST" action="{{ url_for('pipeline_start', slug=slug) }}" style="display:inline">
+        <button type="submit" class="btn btn-primary">Run pipeline</button>
+      </form>
+      {% else %}
+      <form method="POST" action="{{ url_for('pipeline_cancel', slug=slug) }}" style="display:inline">
+        <button type="submit" class="btn btn-secondary">Cancel</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:12px;margin-bottom:1rem">
+    The pipeline runs: Brief → Draft → Humanize + QA loop (up to 3 iterations) → Delivery.
+    LLM provider: <strong>{{ config_provider }}</strong>.
+    To change the provider or API key, go to <a href="{{ url_for('settings') }}">Settings</a>.
+  </p>
+
+  <div class="log-container">
+    <div class="log-header">
+      Pipeline log
+      <span id="pipeline-status-badge" class="badge {% if pipeline_running %}badge-running{% else %}badge-pass{% endif %}">
+        {{ 'Running' if pipeline_running else 'Idle' }}
+      </span>
+    </div>
+    <pre id="pipeline-log" class="log-output" style="min-height:200px"></pre>
+  </div>
+</div>
+
+
+<!-- ── Delivery tab ── -->
+{% elif active_tab == 'delivery' %}
+<div class="tab-content card">
+  <div class="section-header">
+    <h2>Delivery</h2>
+    <form method="POST" action="{{ url_for('build_docx', slug=slug) }}">
+      <button type="submit" class="btn btn-primary">Build .docx files</button>
+    </form>
+  </div>
+
+  <div class="delivery-files">
+    <div class="delivery-file {% if publish_docx_exists %}file-ready{% endif %}">
+      <div class="df-label">Publish doc</div>
+      <div class="df-name"><code>{{ slug }}_publish.docx</code></div>
+      {% if publish_docx_exists %}
+        <a href="{{ url_for('serve_file', slug=slug, filename=slug + '_publish.docx') }}"
+           class="btn btn-primary" download>Download</a>
+      {% else %}<span class="muted">Not built yet</span>{% endif %}
+    </div>
+    <div class="delivery-file {% if review_docx_exists %}file-ready{% endif %}">
+      <div class="df-label">Review doc</div>
+      <div class="df-name"><code>{{ slug }}_review.docx</code></div>
+      {% if review_docx_exists %}
+        <a href="{{ url_for('serve_file', slug=slug, filename=slug + '_review.docx') }}"
+           class="btn btn-secondary" download>Download</a>
+      {% else %}<span class="muted">Not built yet</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="external-gates">
+    <h3>External gates <span class="muted">(manual — required before publication)</span></h3>
+    <div class="gate-list">
+      <label class="gate-item"><input type="checkbox"> Grammarly — grammar, punctuation, plagiarism</label>
+      <label class="gate-item"><input type="checkbox"> Copyscape — web plagiarism check</label>
+      <label class="gate-item"><input type="checkbox"> Quillbot or Grammarly AI Humanizer — AI detection pass</label>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{# Research log polling #}
+{% if active_tab == 'research' and latest_research_job and latest_research_job.status == 'running' %}
+<script>startLogPolling("{{ slug }}");</script>
+{% endif %}
+
+{# Pipeline SSE streaming #}
+{% if active_tab == 'pipeline' %}
+<script>
+  startPipelineStream("{{ slug }}", {{ 'true' if pipeline_running else 'false' }});
+</script>
+{% endif %}
+
+<script>
+  // Brief edit toggle
+  function toggleBriefEdit() {
+    const view = document.getElementById('brief-view');
+    const edit = document.getElementById('brief-edit');
+    const btn  = document.getElementById('edit-brief-btn');
+    if (!view || !edit) return;
+    const editing = edit.style.display !== 'none';
+    view.style.display = editing ? '' : 'none';
+    edit.style.display = editing ? 'none' : '';
+    if (btn) btn.textContent = editing ? 'Edit' : 'Cancel edit';
+    if (!editing) { const ta = document.getElementById('brief-textarea'); if (ta) ta.focus(); }
+  }
+  function submitBriefSave() {
+    document.getElementById('brief-save-form')?.submit();
+  }
+  function copyBriefPrompt() {
+    const el = document.getElementById('brief-prompt-text');
+    if (el) {
+      navigator.clipboard.writeText(el.textContent.trim()).then(() => {
+        const confirm = document.getElementById('copy-confirm');
+        if (confirm) { confirm.style.display = 'inline'; setTimeout(() => confirm.style.display = 'none', 2000); }
+      });
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Settings — ADAP Content System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Settings</h1>
+  <p class="page-meta">Configure the LLM provider, API keys, and optional MCP server.</p>
+</div>
+
+<div class="card" style="max-width:640px">
+  <form method="POST" action="{{ url_for('settings') }}">
+
+    <!-- ── LLM provider ── -->
+    <div class="form-section">
+      <h2 style="font-size:1rem;margin-bottom:.75rem">LLM provider</h2>
+
+      <div class="form-row">
+        <label class="form-label" for="llm_provider">Provider</label>
+        {% set prov = settings.llm_provider %}
+        {% if prov.from_env %}
+          <span class="form-value-locked">{{ prov.value }} <span class="badge badge-env">env</span></span>
+          <input type="hidden" name="llm_provider" value="">
+        {% else %}
+          <select name="llm_provider" id="llm_provider" class="form-input">
+            <option value="anthropic" {% if prov.value == 'anthropic' %}selected{% endif %}>Anthropic (Claude)</option>
+            <option value="openai"    {% if prov.value == 'openai'    %}selected{% endif %}>OpenAI (GPT)</option>
+          </select>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Anthropic ── -->
+    <div class="form-section">
+      <h2 style="font-size:1rem;margin-bottom:.75rem">Anthropic</h2>
+
+      <div class="form-row">
+        <label class="form-label" for="anthropic_api_key">API key</label>
+        {% set k = settings.anthropic_api_key %}
+        {% if k.from_env %}
+          <span class="form-value-locked">{{ k.value }} <span class="badge badge-env">env</span></span>
+        {% else %}
+          <input type="password" name="anthropic_api_key" id="anthropic_api_key"
+                 class="form-input" placeholder="sk-ant-…" autocomplete="off"
+                 value="">
+          <div class="form-hint">
+            {% if k.value %}<span style="color:#555">Currently set (last 4: {{ k.value[-4:] }}). Leave blank to keep unchanged.</span>{% else %}Not set.{% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="form-row">
+        <label class="form-label" for="anthropic_model">Model</label>
+        {% set m = settings.anthropic_model %}
+        {% if m.from_env %}
+          <span class="form-value-locked">{{ m.value }} <span class="badge badge-env">env</span></span>
+        {% else %}
+          <input type="text" name="anthropic_model" id="anthropic_model"
+                 class="form-input" placeholder="claude-sonnet-4-5-20251022"
+                 value="{{ m.value }}">
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── OpenAI ── -->
+    <div class="form-section">
+      <h2 style="font-size:1rem;margin-bottom:.75rem">OpenAI</h2>
+
+      <div class="form-row">
+        <label class="form-label" for="openai_api_key">API key</label>
+        {% set k = settings.openai_api_key %}
+        {% if k.from_env %}
+          <span class="form-value-locked">{{ k.value }} <span class="badge badge-env">env</span></span>
+        {% else %}
+          <input type="password" name="openai_api_key" id="openai_api_key"
+                 class="form-input" placeholder="sk-…" autocomplete="off"
+                 value="">
+          <div class="form-hint">
+            {% if k.value %}<span style="color:#555">Currently set (last 4: {{ k.value[-4:] }}). Leave blank to keep unchanged.</span>{% else %}Not set.{% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="form-row">
+        <label class="form-label" for="openai_model">Model</label>
+        {% set m = settings.openai_model %}
+        {% if m.from_env %}
+          <span class="form-value-locked">{{ m.value }} <span class="badge badge-env">env</span></span>
+        {% else %}
+          <input type="text" name="openai_model" id="openai_model"
+                 class="form-input" placeholder="gpt-4o"
+                 value="{{ m.value }}">
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── MCP server (optional) ── -->
+    <div class="form-section">
+      <h2 style="font-size:1rem;margin-bottom:.75rem">MCP server <span class="muted">(optional)</span></h2>
+      <p class="muted" style="font-size:12px;margin-bottom:.75rem">
+        When enabled, the web app routes all LLM calls through your MCP server instead of calling
+        the provider API directly. Run <code>python mcp_server.py --sse</code> locally and enter
+        its URL below.
+      </p>
+
+      <div class="form-row">
+        <label class="form-label" for="use_mcp_server">Enable MCP</label>
+        {% set u = settings.use_mcp_server %}
+        {% if u.from_env %}
+          <span class="form-value-locked">{{ u.value }} <span class="badge badge-env">env</span></span>
+        {% else %}
+          <select name="use_mcp_server" id="use_mcp_server" class="form-input" style="max-width:120px">
+            <option value="false" {% if u.value != 'true' %}selected{% endif %}>Disabled</option>
+            <option value="true"  {% if u.value == 'true'  %}selected{% endif %}>Enabled</option>
+          </select>
+        {% endif %}
+      </div>
+
+      <div class="form-row">
+        <label class="form-label" for="mcp_server_url">MCP server URL</label>
+        {% set url_s = settings.mcp_server_url %}
+        {% if url_s.from_env %}
+          <span class="form-value-locked">{{ url_s.value }} <span class="badge badge-env">env</span></span>
+        {% else %}
+          <input type="url" name="mcp_server_url" id="mcp_server_url"
+                 class="form-input" placeholder="http://localhost:8090"
+                 value="{{ url_s.value }}">
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="padding-top:.5rem">
+      <button type="submit" class="btn btn-primary">Save settings</button>
+    </div>
+
+  </form>
+</div>
+
+<div class="card" style="max-width:640px;margin-top:1.5rem">
+  <h2 style="font-size:1rem;margin-bottom:.75rem">Environment variables</h2>
+  <p class="muted" style="font-size:12px">
+    Settings set via environment variables override DB values and cannot be edited here.
+    Use <code>.env</code> locally or <code>flyctl secrets set KEY=value</code> for cloud deploys.
+  </p>
+  <table class="data-table" style="font-size:12px">
+    <thead><tr><th>Setting</th><th>Env variable</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>LLM provider</td><td><code>LLM_PROVIDER</code></td><td>{% if settings.llm_provider.from_env %}<span class="badge badge-env">env</span>{% else %}DB{% endif %}</td></tr>
+      <tr><td>Anthropic API key</td><td><code>ANTHROPIC_API_KEY</code></td><td>{% if settings.anthropic_api_key.from_env %}<span class="badge badge-env">env</span>{% else %}DB{% endif %}</td></tr>
+      <tr><td>OpenAI API key</td><td><code>OPENAI_API_KEY</code></td><td>{% if settings.openai_api_key.from_env %}<span class="badge badge-env">env</span>{% else %}DB{% endif %}</td></tr>
+      <tr><td>Anthropic model</td><td><code>ANTHROPIC_MODEL</code></td><td>{% if settings.anthropic_model.from_env %}<span class="badge badge-env">env</span>{% else %}DB{% endif %}</td></tr>
+      <tr><td>OpenAI model</td><td><code>OPENAI_MODEL</code></td><td>{% if settings.openai_model.from_env %}<span class="badge badge-env">env</span>{% else %}DB{% endif %}</td></tr>
+      <tr><td>Use MCP server</td><td><code>USE_MCP_SERVER</code></td><td>{% if settings.use_mcp_server.from_env %}<span class="badge badge-env">env</span>{% else %}DB{% endif %}</td></tr>
+      <tr><td>MCP server URL</td><td><code>MCP_SERVER_URL</code></td><td>{% if settings.mcp_server_url.from_env %}<span class="badge badge-env">env</span>{% else %}DB{% endif %}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

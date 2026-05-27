@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Research: {{ kw_slug }} — ADAP Content System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> /
+    <a href="{{ url_for('page_detail', slug=slug, tab='research') }}">{{ slug }}</a> /
+    Research: {{ kw_slug }}
+  </div>
+  <h1>Research summary: <em>{{ kw_slug }}</em></h1>
+</div>
+
+<div class="card research-content">
+  {{ content_html | safe }}
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+# ADAP Content Gen Web — Python dependencies
+
+# ── Web framework ────────────────────────────────────────────────────────────
+flask>=3.0
+gunicorn>=21.0
+
+# ── LLM providers ────────────────────────────────────────────────────────────
+anthropic>=0.28.0
+openai>=1.30.0
+
+# ── MCP server (optional — needed for mcp_server.py) ─────────────────────────
+mcp>=1.0.0
+
+# ── SERP research (local-only — Playwright + Chrome) ─────────────────────────
+playwright>=1.43.0
+
+# ── Document export ───────────────────────────────────────────────────────────
+python-docx>=1.1.0
+
+# ── Markdown rendering ────────────────────────────────────────────────────────
+markdown>=3.5
+
+# ── Config / environment ──────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+
+# ── HTTP requests (used by MCP client in llm_client.py) ──────────────────────
+requests>=2.31.0
+
+# ── MCP SSE transport (optional — only needed for --sse mode) ────────────────
+uvicorn>=0.29.0
+starlette>=0.37.0

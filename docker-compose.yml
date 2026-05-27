@@ -1,0 +1,32 @@
+# docker-compose.yml — local development with Docker
+
+services:
+  web:
+    build: .
+    ports:
+      - "5001:8080"
+    volumes:
+      # Mount local data directory so output/research/db persist across restarts
+      - ./data:/data
+      # Mount source for live editing (remove in production)
+      - .:/app
+    environment:
+      - DATABASE_PATH=/data/adap.db
+      - FLASK_SECRET_KEY=local-dev-secret
+      # Uncomment and fill in your API keys:
+      # - ANTHROPIC_API_KEY=sk-ant-...
+      # - LLM_PROVIDER=anthropic
+    restart: unless-stopped
+
+  # Optional: MCP server (SSE mode) as a separate service
+  # mcp:
+  #   build: .
+  #   command: python mcp_server.py --sse --port 8090
+  #   ports:
+  #     - "8090:8090"
+  #   environment:
+  #     - DATABASE_PATH=/data/adap.db
+  #     - ANTHROPIC_API_KEY=sk-ant-...
+  #   volumes:
+  #     - ./data:/data
+  #   restart: unless-stopped

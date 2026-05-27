@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}New page — ADAP Content System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">Dashboard</a> / New page</div>
+  <h1>New page</h1>
+</div>
+
+<div class="card form-card">
+  <form method="POST" action="{{ url_for('new_page') }}" id="new-page-form">
+    <div class="form-group">
+      <label for="seed_keyword">Seed keyword <span class="required">*</span></label>
+      <input
+        type="text"
+        id="seed_keyword"
+        name="seed_keyword"
+        value="{{ form.get('seed_keyword', '') }}"
+        placeholder="e.g. active directory security tool"
+        autocomplete="off"
+        required
+      >
+      <p class="field-hint">Primary keyword this page targets.</p>
+    </div>
+
+    <div class="form-group">
+      <label>Cluster keywords <span class="field-hint-inline">Add as many as needed</span></label>
+      <div id="cluster-list">
+        <div class="cluster-row">
+          <input type="text" name="cluster_kw_0" placeholder="e.g. active directory security" autocomplete="off" class="cluster-input">
+          <button type="button" class="btn btn-icon btn-remove-cluster" onclick="removeCluster(this)" title="Remove">✕</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="addCluster()" style="margin-top:.5rem">+ Add cluster keyword</button>
+    </div>
+
+    <div class="form-group">
+      <label for="slug">Page slug <span class="required">*</span></label>
+      <input
+        type="text"
+        id="slug"
+        name="slug"
+        value="{{ form.get('slug', '') }}"
+        placeholder="auto-generated from seed keyword"
+        autocomplete="off"
+        required
+      >
+      <p class="field-hint">Used as the output folder name and file prefix. Auto-filled from seed keyword.</p>
+    </div>
+
+    <div class="form-group">
+      <label for="parallel_batch_size">Parallel batch size <span class="field-hint-inline">Chromium instances to open simultaneously</span></label>
+      <input type="number" id="parallel_batch_size" name="parallel_batch_size" value="3" min="1" max="5" style="width:5rem">
+      <p class="field-hint">How many keywords to research at the same time (1–5). Default: 3. One Chromium window opens per keyword.</p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Create page &amp; start research</button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-generate slug from seed keyword
+  const seedInput = document.getElementById('seed_keyword');
+  const slugInput = document.getElementById('slug');
+  let slugEdited = slugInput.value.length > 0;
+  slugInput.addEventListener('input', () => { slugEdited = true; });
+  seedInput.addEventListener('input', () => {
+    if (slugEdited) return;
+    const raw = seedInput.value.toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    slugInput.value = raw;
+  });
+
+  let clusterCount = 1;
+
+  function addCluster() {
+    const list = document.getElementById('cluster-list');
+    const row = document.createElement('div');
+    row.className = 'cluster-row';
+    row.innerHTML = `<input type="text" name="cluster_kw_${clusterCount}" placeholder="Cluster keyword" autocomplete="off" class="cluster-input">
+      <button type="button" class="btn btn-icon btn-remove-cluster" onclick="removeCluster(this)" title="Remove">✕</button>`;
+    list.appendChild(row);
+    clusterCount++;
+    row.querySelector('input').focus();
+  }
+
+  function removeCluster(btn) {
+    const rows = document.querySelectorAll('.cluster-row');
+    if (rows.length <= 1) {
+      btn.previousElementSibling.value = '';
+      btn.previousElementSibling.focus();
+      return;
+    }
+    btn.closest('.cluster-row').remove();
+  }
+</script>
+{% endblock %}
