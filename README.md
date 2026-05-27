@@ -43,6 +43,67 @@ Or via the convenience script:
 
 ---
 
+## How to use
+
+### 1. Configure settings
+
+Before creating any pages, go to **Settings** (`/settings`) and fill in:
+
+- **LLM provider** — choose Anthropic or OpenAI and paste your API key
+- **Prompt templates** (`/settings/prompts`) — review and customise the six pipeline step prompts (brief, draft, humanize, fix, publish, review). The defaults work out of the box but can be tailored to your product or style
+- **Reference files** (`/settings/reference`) — upload your content reference files (`.md`, `.docx`, or `.txt`). The pipeline loads all files in `reference/` automatically at each step. Recommended files to add:
+
+| Filename | Purpose |
+|---|---|
+| `writer_instructions.md` | Full writing workflow and structural rules |
+| `style_guide.md` | House style, terminology, and grammar rules |
+| `content_examples.md` | Page template and canonical section examples |
+| `humanizer_guide.md` | AI pattern removal rules |
+| `serp_instructions.md` | SERP research and PAA extraction guide |
+| `product_docs.md` | Product capability reference for accuracy checks |
+| `interlinking_list.md` | Internal link candidates |
+| `qa_rules.md` | Optional: custom `BANNED:` string rules for the QA checker |
+
+### 2. Create a page
+
+1. Click **New page** on the dashboard
+2. Enter the target keyword (e.g. `file server auditing`) — the slug is auto-generated
+3. Click **Create**
+
+### 3. Run SERP research (optional but recommended)
+
+From the page detail view, open the **Research** tab and click **Start research**.
+
+This launches `serp_research.py` which:
+- Scrapes the Google SERP (AI Overview, PAA, top 10 results)
+- Extracts competitor headings and page structure
+- Writes a structured research summary to `research/<slug>/`
+
+> **Network requirement:** SERP research uses a real local Chrome profile. Connect to the network region that matches your target audience's Google locale before running research. For example, if you are writing for a US audience, connect via a US-based VPN.
+
+### 4. Run the pipeline
+
+Open the **Pipeline** tab and click **Start pipeline**. The pipeline runs six steps in sequence:
+
+| Step | What happens |
+|---|---|
+| **Brief** | Generates a content brief from the research summary and reference files |
+| **Brief review** | Pauses for your approval — edit the brief directly in the UI if needed, then click Approve |
+| **Draft** | Writes the full page draft using the approved brief and all reference files |
+| **Humanize + QA** | Removes AI writing patterns, runs the QA checker, auto-fixes em dashes and passive voice |
+| **Publish** | Produces the clean publish-ready version |
+| **Review** | Produces the review document (QA scorecard + research notes) |
+
+Each step streams live output to the UI. You can cancel at any point.
+
+### 5. Download output files
+
+Once the pipeline completes, go to the **Files** tab to download:
+- `<slug>_publish.docx` — clean publishable page with internal links only
+- `<slug>_review.docx` — QA scorecard, research notes, and pipeline log
+
+---
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -112,8 +173,8 @@ Then in the web app Settings, set:
 
 `serp_research.py` uses a real persistent Chrome profile logged into Google.
 It **cannot run on Fly.io or any cloud server** — it requires:
-- A local Chrome profile with Google sign-in
-- A US-located network connection (or US VPN active)
+- A local Chrome installation with a persistent profile signed into Google
+- A network connection matching the target locale for your SERP data (configure your VPN accordingly before running research)
 
 **Workflow for cloud deploys:**
 1. Run research locally: the app writes to `research/<keyword-slug>/`
