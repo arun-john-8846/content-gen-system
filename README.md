@@ -1,7 +1,294 @@
-# Content Gen Web
+# Content Gen System
 
-A platform-agnostic web app for running a multi-step content production pipeline.
-Runs standalone — no VS Code or IDE required.
+A platform-agnostic web app for running a multi-step AI content production pipeline.
+Bring your own reference files, prompt templates, and API key — the system handles the rest.
+
+---
+
+## What it does
+
+Takes a keyword → runs SERP research → generates a content brief → drafts a full page → humanizes and QA-checks the draft → delivers publish-ready and review output files.
+
+The pipeline runs entirely in the browser UI. No VS Code or IDE required.
+
+---
+
+## Requirements
+
+Before installing, make sure you have:
+
+- **Python 3.9+** (`python3 --version`)
+- **Google Chrome** installed (needed for SERP research only)
+- An **Anthropic** or **OpenAI** API key
+
+---
+
+## Installation
+
+**Step 1 — Clone the repo**
+
+```bash
+git clone https://github.com/arun-john-8846/content-gen-system.git
+cd content-gen-system
+```
+
+**Step 2 — Create a virtual environment**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**Step 3 — Install dependencies**
+
+```bash
+pip install -r requirements.txt
+```
+
+**Step 4 — Install Playwright browsers** (needed for SERP research only)
+
+```bash
+playwright install chromium
+```
+
+**Step 5 — Set your API key**
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and set your key:
+
+```
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Or use OpenAI:
+
+```
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+```
+
+**Step 6 — Start the app**
+
+```bash
+python app.py
+```
+
+Open **http://localhost:5001** in your browser.
+
+---
+
+## First-time setup
+
+Before creating content, complete these three setup steps in **Settings**.
+
+### Step A — API key
+
+Go to **Settings** (`/settings`). Confirm your LLM provider and API key are set correctly. Click **Save**.
+
+### Step B — Upload your reference files
+
+Go to **Settings → Reference files** (`/settings/reference`).
+
+Upload the files that define your content rules. The pipeline loads every file in the `reference/` folder automatically at each step — no configuration needed beyond uploading.
+
+Recommended files to create and upload:
+
+| Filename | What to put in it |
+|---|---|
+| `writer_instructions.md` | Your writing workflow, page structure rules, word count targets, heading rules |
+| `style_guide.md` | House style: naming conventions, banned phrases, formatting rules, voice |
+| `humanizer_guide.md` | AI pattern removal rules + list of protected product terminology |
+| `content_examples.md` | 1–3 full examples of good published pages for the pipeline to match |
+| `product_docs.md` | Your product's feature documentation — used to verify capability claims |
+| `serp_instructions.md` | How to interpret SERP data, what to prioritise, PAA extraction rules |
+| `interlinking_list.md` | Internal link targets (URL + anchor text) |
+| `qa_rules.md` | Optional — add `BANNED: phrase` lines to flag specific strings in QA |
+
+> All files ship as empty placeholders. Replace them with your own content.
+
+### Step C — Review prompt templates
+
+Go to **Settings → Prompt templates** (`/settings/prompts`).
+
+Six prompts control the pipeline steps: brief, draft, humanize, fix, publish, review. The defaults are generic and work out of the box. Edit them to match your product, style, or workflow. Changes are saved to the database and take effect on the next pipeline run.
+
+---
+
+## How to use
+
+### 1. Create a page
+
+1. Click **New page** on the dashboard
+2. Enter the target keyword (e.g. `file server auditing`) — the URL slug is generated automatically
+3. Click **Create**
+
+### 2. Run SERP research
+
+From the page detail view, open the **Research** tab and click **Start research**.
+
+> **Before you start:** Close Chrome completely, then connect to the VPN for your target audience's locale. SERP results vary by region — match the locale to where your readers are.
+
+The research tool:
+- Opens Chrome with your real profile (to avoid bot detection)
+- Scrapes the AI Overview, People Also Ask questions, and top 10 organic results
+- Extracts competitor page structure (headings, sections present, word count)
+- Writes a structured `research_summary.md` to `research/<slug>/`
+
+The research step is optional — you can skip it and run the pipeline directly if you have a brief ready.
+
+### 3. Run the pipeline
+
+Open the **Pipeline** tab and click **Start pipeline**. Six steps run in sequence:
+
+| # | Step | What happens |
+|---|---|---|
+| 1 | **Brief** | Generates a content brief from the research summary and all reference files |
+| 2 | **Brief review** | Pauses for your approval — edit the brief in the UI if needed, then click **Approve** to continue |
+| 3 | **Draft** | Writes the full page draft using the approved brief and reference files |
+| 4 | **Humanize + QA** | Removes AI writing patterns, runs QA checks, auto-fixes em dashes and passive voice |
+| 5 | **Publish** | Produces the clean publish-ready version with meta variants and internal links |
+| 6 | **Review** | Produces the review document: QA scorecard, research notes, pipeline log |
+
+Each step streams live output to the UI. You can cancel at any point.
+
+### 4. Download output files
+
+When the pipeline completes, open the **Files** tab:
+
+- `<slug>_publish.docx` — clean, publish-ready page (meta variants + internal links only)
+- `<slug>_review.docx` — QA scorecard, research notes, and full pipeline log
+
+---
+
+## Environment variables
+
+All variables can also be set via the **Settings** page. Environment variables take priority over database settings.
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_PROVIDER` | `anthropic` | `anthropic` or `openai` |
+| `ANTHROPIC_API_KEY` | — | Your Anthropic API key |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-5-20251022` | Anthropic model |
+| `OPENAI_API_KEY` | — | Your OpenAI API key |
+| `OPENAI_MODEL` | `gpt-4o` | OpenAI model |
+| `USE_MCP_SERVER` | `false` | Route LLM calls via MCP server |
+| `MCP_SERVER_URL` | — | MCP server URL (e.g. `http://localhost:8090`) |
+| `FLASK_SECRET_KEY` | `content-gen-web-2026` | Flask session secret — change in production |
+| `DATABASE_PATH` | `./adap.db` | SQLite file path |
+| `PORT` | `5001` | Server port |
+
+---
+
+## SERP research — local only
+
+`serp_research.py` uses a real persistent Chrome profile. It **cannot run on a cloud server** — it requires a local Chrome installation and a logged-in Google profile.
+
+**Workflow when using a cloud deploy for the pipeline:**
+1. Run research locally — results are written to `research/<slug>/`
+2. Sync the `research/` folder to the cloud volume (rsync, Fly.io volume transfer, etc.)
+3. Run the pipeline on the cloud app — it reads the research summaries and does not need Chrome
+
+---
+
+## Deployment
+
+### Fly.io
+
+```bash
+brew install flyctl
+flyctl auth login
+flyctl launch --no-deploy
+flyctl volumes create content_gen_data --size 5 --region lax
+flyctl secrets set FLASK_SECRET_KEY="$(openssl rand -hex 32)"
+flyctl secrets set ANTHROPIC_API_KEY="sk-ant-..."
+flyctl secrets set LLM_PROVIDER="anthropic"
+flyctl deploy
+```
+
+### Docker (local)
+
+```bash
+docker compose up --build
+# Open http://localhost:5001
+```
+
+---
+
+## MCP server (optional)
+
+Exposes `llm_proxy` and `run_pipeline` tools for use with Claude Desktop, Cursor, or any MCP-compatible client.
+
+**Stdio mode:**
+```bash
+python mcp_server.py
+```
+
+Claude Desktop config (`~/.claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "content-gen": {
+      "command": "python",
+      "args": ["/path/to/content-gen-system/mcp_server.py"],
+      "env": { "ANTHROPIC_API_KEY": "sk-ant-...", "LLM_PROVIDER": "anthropic" }
+    }
+  }
+}
+```
+
+**SSE/HTTP mode:**
+```bash
+python mcp_server.py --sse --port 8090
+```
+Then in Settings, enable MCP and set the server URL to `http://localhost:8090`.
+
+---
+
+## Project structure
+
+```
+content-gen-system/
+  app.py                    Flask app — routes and views
+  pipeline.py               LLM pipeline (brief → draft → humanize+QA → deliver)
+  llm_client.py             Anthropic / OpenAI / MCP abstraction
+  mcp_server.py             MCP server (stdio + SSE modes)
+  config.py                 Settings loader (env → DB → defaults)
+  models.py                 SQLite schema + CRUD
+  jobs.py                   Research subprocess runner
+  requirements.txt
+  .env.example
+  Dockerfile
+  fly.toml
+  docker-compose.yml
+  static/
+    app.js                  Pipeline SSE + research log polling
+    style.css
+  templates/
+    base.html               Base layout and nav
+    dashboard.html          Page list
+    new_page.html           Create page form
+    page_detail.html        Page tabs: Research, Pipeline, Files
+    settings.html           API key and LLM provider
+    settings_prompts.html   Edit per-step pipeline prompts
+    settings_reference.html Upload and manage reference files
+    research_view.html      Research log viewer
+  tools/
+    serp_research.py        SERP scraper (Playwright + Chrome)
+    qa_check.py             QA checker (em dash, POV, AI patterns, custom rules)
+    build_docx.py           Markdown → .docx converter
+    flow_check.py           Page structure validator
+    batch_structural_fix.py Batch auto-fix tool
+    setup.sh                One-time setup helper script
+  reference/                Content rules — upload your own files here
+  output/                   Generated files (per-slug subfolders)
+  research/                 SERP research data (per-keyword subfolders)
+  logs/                     Research subprocess logs
+```
+
 
 ## What it does
 
