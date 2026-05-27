@@ -1,14 +1,14 @@
-# ADAP Content Gen Web
+# Content Gen Web
 
-Platform-agnostic web app for generating ManageEngine ADAudit Plus feature pages.
-Runs standalone — no VS Code required.
+A platform-agnostic web app for running a multi-step content production pipeline.
+Runs standalone — no VS Code or IDE required.
 
 ## What it does
 
 - **Dashboard** — tracks all pages through a 6-step workflow
 - **Research** — triggers `serp_research.py` (SERP scraping via Playwright + Chrome)
 - **LLM pipeline** — brief → draft → humanize+QA loop → delivery, fully automated
-- **Settings** — configure Anthropic or OpenAI API keys via the web UI
+- **Settings** — configure API keys, pipeline prompt templates, and reference files via the web UI
 - **MCP server** — optional; exposes `llm_proxy` and `run_pipeline` tools for Claude Desktop / Cursor
 - **Delivery** — generates `_publish.docx` and `_review.docx`
 
@@ -54,7 +54,7 @@ Or via the convenience script:
 | `OPENAI_MODEL` | `gpt-4o` | OpenAI model name |
 | `USE_MCP_SERVER` | `false` | Route LLM calls via MCP server |
 | `MCP_SERVER_URL` | — | MCP server URL (e.g. `http://localhost:8090`) |
-| `FLASK_SECRET_KEY` | `adap-web-dev-2026` | Flask session secret — change in production |
+| `FLASK_SECRET_KEY` | `content-gen-web-2026` | Flask session secret — change in production |
 | `DATABASE_PATH` | `./adap.db` | SQLite path — set to `/data/adap.db` on Fly.io |
 | `PORT` | `5001` | Server port |
 
@@ -77,9 +77,9 @@ Claude Desktop config (`~/.claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
-    "adap": {
+    "content-gen": {
       "command": "python",
-      "args": ["/path/to/ADAP-Content-Gen-Web/mcp_server.py"],
+      "args": ["/path/to/content-gen-web/mcp_server.py"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-...",
         "LLM_PROVIDER": "anthropic"
@@ -163,13 +163,13 @@ docker compose up --build
 ## Project structure
 
 ```
-ADAP-Content-Gen-Web/
+content-gen-web/
   app.py              Flask app (routes, views)
   pipeline.py         LLM pipeline (brief → draft → humanize+QA → deliver)
   llm_client.py       Anthropic/OpenAI/MCP abstraction
   mcp_server.py       MCP server (stdio + SSE modes)
   config.py           Settings loader (env → DB → defaults)
-  models.py           SQLite schema + CRUD (pages, jobs, step_events, settings)
+  models.py           SQLite schema + CRUD (pages, jobs, step_events, settings, prompts)
   jobs.py             Research subprocess runner
   requirements.txt
   .env.example
@@ -180,14 +180,16 @@ ADAP-Content-Gen-Web/
     app.js            Research log polling + pipeline SSE
     style.css
   templates/
-    base.html         Nav with Settings link
+    base.html             Nav with Settings link
     dashboard.html
     new_page.html
-    page_detail.html  6 tabs including Pipeline tab
-    settings.html     API key / provider / MCP configuration
+    page_detail.html      6 tabs including Pipeline tab
+    settings.html         API key / provider / MCP configuration
+    settings_prompts.html Edit per-step LLM prompt templates
+    settings_reference.html Upload / manage reference .md/.docx/.txt files
     research_view.html
   tools/              Python tools (serp_research.py, qa_check.py, build_docx.py, …)
-  reference/          Content production reference files
+  reference/          Content production reference files (loaded dynamically by pipeline)
   output/             Generated page files (per-slug subfolders)
   research/           SERP research data (per-keyword subfolders)
   logs/               Research subprocess logs
